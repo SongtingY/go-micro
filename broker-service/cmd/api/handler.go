@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 )
 
@@ -50,11 +51,18 @@ func (app *Config) HandleSubmission(w http.ResponseWriter, r *http.Request) {
 
 func (app *Config) authenticate(w http.ResponseWriter, a AuthPayload) {
 	// create some json we will send to the auth microservice
-	jsonData, _ := json.MarshalIndent(a, "", "\t")
+	// jsonData, _ := json.MarshalIndent(a, "", "\t")
+	jsonData, err := json.MarshalIndent(a, "", "\t")
+	if err != nil {
+		log.Println("Error marshaling AuthPayload:", err)
+		app.errorJSON(w, err)
+		return
+	}
 
 	// call the service
 	request, err := http.NewRequest("POST", "http://authentication-service/authenticate", bytes.NewBuffer(jsonData))
 	if err != nil {
+		log.Println("Error creating request:", err)
 		app.errorJSON(w, err)
 		return
 	}
@@ -62,6 +70,7 @@ func (app *Config) authenticate(w http.ResponseWriter, a AuthPayload) {
 	client := &http.Client{}
 	response, err := client.Do(request)
 	if err != nil {
+		// log.Println("Error1:", err)
 		app.errorJSON(w, err)
 		return
 	}
