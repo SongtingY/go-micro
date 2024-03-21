@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"log-service/data"
+	"net/http"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -12,13 +15,14 @@ import (
 const (
 	webPort  = "80"
 	rpcPort  = "5001"
-	mongoURL = "mongodb://mongo:27017"
+	mongoURL = "mongodb://localhost:27017"
 	gRpcPort = "50001"
 )
 
 var client *mongo.Client
 
 type Config struct {
+	Model data.Models
 }
 
 func main() {
@@ -30,20 +34,48 @@ func main() {
 	}
 
 	client = mongoClient
-	
+
 	// create a context in order to disconnect
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	// close connection
-	defer func(){
-		if err = client.Disconnect(ctx); err != nil{
+	defer func() {
+		if err = client.Disconnect(ctx); err != nil {
 			panic(err)
 		}
+	}()
+
+	app := Config{
+		Model: data.New(client),
+	}
+
+	// start web server
+	// go app.serve()
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%s", webPort),
+		Handler: app.routes(),
+	}
+
+	err = srv.ListenAndServe()
+	if err != nil {
+		log.Panic()
 	}
 }
 
-func connectToMongo()(*mongo.Client, error){
+func (app *Config) serve() {
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%s", webPort),
+		Handler: app.routes(),
+	}
+
+	err := srv.ListenAndServe()
+	if err != nil {
+		log.Panic()
+	}
+}
+
+func connectToMongo() (*mongo.Client, error) {
 	//create connection options
 	clientOption := options.Client().ApplyURI(mongoURL)
 	clientOption.SetAuth(options.Credential{
@@ -53,9 +85,12 @@ func connectToMongo()(*mongo.Client, error){
 
 	// connect
 	c, err := mongo.Connect(context.TODO(), clientOption)
-	if err != nil{
+	if err != nil {
 		log.Println("Error connecting:", err)
 		return nil, err
 	}
+
+	log.Println("Connected to mongo")
+
 	return c, err
 }
