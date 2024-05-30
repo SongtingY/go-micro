@@ -56,6 +56,7 @@ func main() {
 	// registr rpc server
 	err = rpc.Register(new(RPCServer))
 	go app.rpcListen()
+	go app.gPRCListen()
 
 	// start web server
 	// go app.serve()
