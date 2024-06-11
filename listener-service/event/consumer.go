@@ -80,7 +80,9 @@ func (consumer *Consumer) Listen(topics []string) error {
 			if err != nil {
 				log.Println("error while convert queue message", err)
 			}
+
 			go handlePayload(payload)
+
 		}
 	}()
 
